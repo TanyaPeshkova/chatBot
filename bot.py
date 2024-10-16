@@ -6,6 +6,8 @@ import requests
 
 API_TOKEN = '7817016998:AAE2pO153_RxxsQ2KIxzAVLL5ofZBbJ7rEk'
 OPENCAGE_API_KEY = '6e7c559dbdb24eea901e3a7a8a3e9c7f'
+EXCHANGE_API_KEY = 'd369366698ebd73734e924e2'
+
 
 bot = telebot.TeleBot(API_TOKEN)
 
@@ -16,8 +18,9 @@ def send_welcome(message):
 
 def show_main_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    item = types.KeyboardButton("Узнать дату и время")
-    markup.add(item)
+    date = types.KeyboardButton("Узнать дату и время")
+    currency = types.KeyboardButton("Конвертация валюты")
+    markup.add(date,currency)
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == "Узнать дату и время")
@@ -48,7 +51,7 @@ def get_city_time(message):
         bot.send_message(message.chat.id, "Не удалось определить временную зону для указанного города. Пожалуйста, проверьте название города.")
 
     show_main_menu(message)
-    
+
 
 def get_timezone_by_city(city):
     url = f"https://api.opencagedata.com/geocode/v1/json?q={city}&key={OPENCAGE_API_KEY}&language=ru"
@@ -60,6 +63,47 @@ def get_timezone_by_city(city):
             timezone = data['results'][0]['annotations']['timezone']['name']
             return timezone
     return None
+
+@bot.message_handler(func=lambda message: message.text == "Конвертация валюты")
+def ask_from_currency(message):
+    bot.send_message(message.chat.id, "Введите валюту, из которой хотите перевести сумму (например, RUB):")
+    bot.register_next_step_handler(message, ask_to_currency)
+
+def ask_to_currency(message):
+    from_currency = message.text.upper()
+    bot.send_message(message.chat.id, "Введите валюту, в которую хотите перевести сумму (например, USD):")
+    bot.register_next_step_handler(message, lambda msg: ask_amount(msg, from_currency))
+
+def ask_amount(message, from_currency):
+    to_currency = message.text.upper()
+    bot.send_message(message.chat.id, "Введите сумму для конвертации:")
+    bot.register_next_step_handler(message, lambda msg: convert_currency(msg, from_currency, to_currency))
+
+def convert_currency(message, from_currency, to_currency):
+    try:
+        amount = float(message.text)
+        rate = get_exchange_rate(from_currency, to_currency)
+        
+        if rate:
+            converted_amount = amount * rate
+            bot.send_message(message.chat.id, f"{amount} {from_currency} = {converted_amount:.2f} {to_currency}")
+        else:
+            bot.send_message(message.chat.id, "Не удалось получить курс валют. Пожалуйста, проверьте валюты.")
+    except ValueError:
+        bot.send_message(message.chat.id, "Неверный формат. Пожалуйста, введите сумму числом.")
+    
+    show_main_menu(message)
+
+def get_exchange_rate(from_currency, to_currency):
+    url = f"https://v6.exchangerate-api.com/v6/{EXCHANGE_API_KEY}/latest/{from_currency}"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if 'conversion_rates' in data and to_currency in data['conversion_rates']:
+            return data['conversion_rates'][to_currency]
+    return None
+
 
 @bot.message_handler(commands=['help'])
 def send_help(message):
