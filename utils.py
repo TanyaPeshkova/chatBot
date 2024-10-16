@@ -23,14 +23,14 @@ def get_exchange_rate(from_currency, to_currency):
     return None
 
 def get_weather(city):
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&lang=ru&units=metric"
+    url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={city}&lang=ru"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        weather_description = data['weather'][0]['description']
-        temperature = data['main']['temp']
-        humidity = data['main']['humidity']
-        wind_speed = data['wind']['speed']
+        weather_description = data['current']['condition']['text']
+        temperature = data['current']['temp_c']
+        humidity = data['current']['humidity']
+        wind_speed = data['current']['wind_mph']
         return   (
                 f"Погода в городе {city}:\n"
                 f"Описание: {weather_description}\n"
