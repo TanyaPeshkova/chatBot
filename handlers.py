@@ -1,24 +1,20 @@
-import telebot
 from telebot import types
 from datetime import datetime
 import pytz
-import requests
-from config import API_TOKEN
-from utils import get_timezone_by_city, get_exchange_rate
-
-# bot = telebot.TeleBot(API_TOKEN)
+from utils import *
 
 def send_welcome(bot, message):
     bot.reply_to(message, "Добро пожаловать! Как я могу помочь Вам?")
     
-    show_main_menu(message)
+    show_main_menu(bot,message)
 
 
 def show_main_menu(bot, message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     date = types.KeyboardButton("Узнать дату и время")
     currency = types.KeyboardButton("Конвертация валюты")
-    markup.add(date,currency)
+    weather = types.KeyboardButton("Узнать погоду")
+    markup.add(date,currency, weather)
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup=markup)
 
 
@@ -28,6 +24,7 @@ def ask_region(bot, message):
     no_button = types.KeyboardButton("Нет")
     markup.add(yes_button, no_button)
     bot.send_message(message.chat.id, "Вы из Томской области?", reply_markup=markup)
+    bot.register_next_step_handler(message, handle_region_response, bot)
 
 
 def handle_region_response(bot, message):
@@ -35,6 +32,7 @@ def handle_region_response(bot, message):
         tomsk_tz = pytz.timezone('Asia/Tomsk')
         local_time = datetime.now(tomsk_tz).strftime("%Y-%m-%d %H:%M:%S")
         bot.send_message(message.chat.id, f"Местная дата и время в Томске: {local_time}")
+        show_main_menu(bot, message)
     else:
         bot.send_message(message.chat.id, "Введите ваш город:")
         bot.register_next_step_handler(message, get_city_time,bot)
@@ -51,7 +49,7 @@ def get_city_time( message, bot):
     
     show_main_menu(bot, message)
 
-def ask_from_currency(message, bot):
+def ask_from_currency(bot, message):
     bot.send_message(message.chat.id, "Введите валюту, из которой хотите перевести сумму (например, RUB):")
     bot.register_next_step_handler(message, ask_to_currency, bot)
 
@@ -81,20 +79,60 @@ def convert_currency(message, from_currency, to_currency, bot):
     show_main_menu(bot, message)
 
 
+def ask_city(bot, message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    yes_button = types.KeyboardButton("Да")
+    no_button = types.KeyboardButton("Нет")
+    markup.add(yes_button, no_button)
+    bot.send_message(message.chat.id, "Узнать погоду в Томске?", reply_markup=markup)
+    bot.register_next_step_handler(message, handle_waether_response, bot)
+
+
+def handle_waether_response( message, bot):
+    if message.text == "Да":
+        weather_info = get_weather("Томск")
+        if weather_info:
+            bot.send_message(message.chat.id, weather_info)
+        else:
+            bot.send_message(message.chat.id, "Не удалось получить данные о погоде. Пожалуйста, проверьте название города.")
+        show_main_menu(bot, message)
+    else:
+        bot.send_message(message.chat.id, "Введите ваш город:")
+        bot.register_next_step_handler(message, get_city_weather,bot)
+    
+
+def get_city_weather( message, bot):
+    city = message.text
+    weather_info = get_weather(city)
+    if weather_info:
+            bot.send_message(message.chat.id, weather_info)
+    else:
+        bot.send_message(message.chat.id, "Не удалось получить данные о погоде. Пожалуйста, проверьте название города.")
+    
+    show_main_menu(bot, message)
+
+
+
 def send_help(message, bot):
     bot.reply_to(message, "Как я могу вам помочь?")
 
 
 def echo_all(message, bot):
     user_message = message.text.lower()
-
-    if 'как дела' in user_message or 'как ты' in user_message:
+    if 'как дела' in user_message  or 'как ты' in user_message or 'как настроение' in user_message:
         bot.reply_to(message, "У меня всё отлично, спасибо! А у Вас?")
     elif 'что делаешь' in user_message or 'чем занимаешься' in user_message:
         bot.reply_to(message, "Я здесь, чтобы помочь Вам! А Вы чем занимаетесь?")
-    elif 'привет' in user_message or 'здравствуй' in user_message:
+    elif 'привет' in user_message  or 'здравствуй' in user_message:
         bot.reply_to(message, "Здавствуйте! Как я могу помочь Вам?")
-    elif 'пока' in user_message or 'до свидания' in user_message:
-        bot.reply_to(message, "До свидания!")    
+    elif 'кто ты' in user_message or 'как тебя зовут' in user_message:
+        bot.reply_to(message, "Я — ваш виртуальный помощник, созданный для того, чтобы отвечать на ваши вопросы и помогать вам с различными задачами. Чем могу помочь вам сегодня?")
+    elif 'пока' in user_message  or 'до свидания' in user_message:
+        bot.reply_to(message, "До свидания!")
+    elif 'нравится' in user_message or 'любимый' in user_message:
+        bot.reply_to(message, "Как чат-боту, у меня нет 'нравится' в том же смысле, что у человека. 😊 Но мне очень нравится учиться! \n Я люблю получать новую информацию, расширять свои знания и использовать их, чтобы быть полезным. ")
+    elif 'у тебя планы' in user_message:
+        bot.reply_to(message, "У меня нет планов в том смысле, что у человека, у которого есть желания, мечты и стремления. 😅 \nЯ — большая языковая модель, и моя главная задача — помогать людям. ")
+    
     else:
-        bot.reply_to(message, "Извините, я Вас не понимю")
+        bot.reply_to(message, "Извините, я Вас не понимаю")

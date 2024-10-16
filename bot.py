@@ -24,7 +24,15 @@ def handle_region(message):
 
 @bot.message_handler(func=lambda message: message.text == "Конвертация валюты")
 def handle_currency_change(message):
-    ask_from_currency(message, bot)
+    ask_from_currency(bot, message)
+
+@bot.message_handler(func=lambda message: message.text == "Узнать погоду")
+def handle_weather(message):
+    ask_city( bot,message)
+
+@bot.message_handler(func=lambda message: message.text in ["Да", "Нет"])
+def handle_city(message):
+    handle_waether_response( bot,message)
 
 
 @bot.message_handler(commands=['help'])
