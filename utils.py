@@ -1,5 +1,8 @@
 import requests
 from config import OPENCAGE_API_KEY, EXCHANGE_API_KEY, WEATHER_API_KEY
+from bs4 import BeautifulSoup
+import urllib.parse
+
 
 def get_timezone_by_city(city):
     url = f"https://api.opencagedata.com/geocode/v1/json?q={city}&key={OPENCAGE_API_KEY}&language=ru"
@@ -40,3 +43,28 @@ def get_weather(city):
             )
     else:
         return None
+
+def search_google(query):
+    url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        search_results = []
+        
+        for item in soup.find_all('h3'):
+            title = item.get_text()
+            parent_link = item.find_parent('a')
+
+            if parent_link and 'href' in parent_link.attrs:
+                link = parent_link['href']
+                search_results.append(f"{title}\nCсылка на ресурс: {link}\n")
+        
+        return "\n".join(search_results) if search_results else "Результаты не найдены."
+    else:
+        return "Не удалось выполнить поиск."

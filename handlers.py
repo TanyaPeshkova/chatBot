@@ -3,9 +3,9 @@ from datetime import datetime
 import pytz
 from utils import *
 
+
 def send_welcome(bot, message):
     bot.reply_to(message, "Добро пожаловать! Как я могу помочь Вам?")
-    
     show_main_menu(bot,message)
 
 
@@ -14,7 +14,8 @@ def show_main_menu(bot, message):
     date = types.KeyboardButton("Узнать дату и время")
     currency = types.KeyboardButton("Конвертация валюты")
     weather = types.KeyboardButton("Узнать погоду")
-    markup.add(date,currency, weather)
+    search = types.KeyboardButton("Найти в интернете")
+    markup.add(date,currency, weather,search)
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup=markup)
 
 
@@ -27,7 +28,7 @@ def ask_region(bot, message):
     bot.register_next_step_handler(message, handle_region_response, bot)
 
 
-def handle_region_response(bot, message):
+def handle_region_response(message, bot):
     if message.text == "Да":
         tomsk_tz = pytz.timezone('Asia/Tomsk')
         local_time = datetime.now(tomsk_tz).strftime("%Y-%m-%d %H:%M:%S")
@@ -112,9 +113,25 @@ def get_city_weather( message, bot):
     show_main_menu(bot, message)
 
 
+def ask_query(bot, message):
+    bot.send_message(message.chat.id, "Введите ваш запрос")
+    bot.register_next_step_handler(message, handle_google_search, bot)
+
+
+def handle_google_search(message, bot):
+    query = message.text
+    google_info = search_google(query)
+    bot.reply_to(message, google_info)
 
 def send_help(message, bot):
-    bot.reply_to(message, "Как я могу вам помочь?")
+    help_text = (
+        "Этот чат-бот может:\n"
+        "1. Узнать местное время в Томске или в любом другом регионе мира.\n"
+        "2. Конвертировать валюты.\n"
+        "3. Узнать погоду в Томске или любом другом городе мира.\n"
+        "4. Найти информацию в интернете."
+    )
+    bot.reply_to(message, help_text)
 
 
 def echo_all(message, bot):
@@ -128,7 +145,7 @@ def echo_all(message, bot):
     elif 'кто ты' in user_message or 'как тебя зовут' in user_message:
         bot.reply_to(message, "Я — ваш виртуальный помощник, созданный для того, чтобы отвечать на ваши вопросы и помогать вам с различными задачами. Чем могу помочь вам сегодня?")
     elif 'пока' in user_message  or 'до свидания' in user_message:
-        bot.reply_to(message, "До свидания!")
+        bot.reply_to(message, "До свидания!\n Надеюсь, я смог Вам помочь!")
     elif 'нравится' in user_message or 'любимый' in user_message:
         bot.reply_to(message, "Как чат-боту, у меня нет 'нравится' в том же смысле, что у человека. 😊 Но мне очень нравится учиться! \n Я люблю получать новую информацию, расширять свои знания и использовать их, чтобы быть полезным. ")
     elif 'у тебя планы' in user_message:
