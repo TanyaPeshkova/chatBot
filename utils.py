@@ -1,7 +1,6 @@
 import requests
 from config import OPENCAGE_API_KEY, EXCHANGE_API_KEY, WEATHER_API_KEY
 from bs4 import BeautifulSoup
-import urllib.parse
 
 
 def get_timezone_by_city(city):
